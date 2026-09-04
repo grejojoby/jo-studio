@@ -1,5 +1,7 @@
 import type { StudioProject } from '../studio-model';
 
+// IndexedDB supports structured data and Blobs: https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API
+
 const STORE_NAME = 'projects';
 const CURRENT_PROJECT_KEY = 'current';
 

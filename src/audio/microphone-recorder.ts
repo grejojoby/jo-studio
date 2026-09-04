@@ -1,3 +1,6 @@
+// Capture and recorder contracts:
+// https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+// https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder
 const RECORDER_TYPES = [
   'audio/webm;codecs=opus',
   'audio/webm',

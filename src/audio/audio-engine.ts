@@ -30,6 +30,7 @@ export function clampMixLevel(value: number): number {
 
 export class AudioEngine {
   private context?: AudioContext;
+  private readonly decodedBuffers = new WeakMap<Blob, AudioBuffer>();
   private playbackSources: AudioBufferSourceNode[] = [];
   private playbackChain?: EffectChain;
   private monitorChain?: EffectChain;
@@ -46,8 +47,12 @@ export class AudioEngine {
   }
 
   async decode(blob: Blob): Promise<AudioBuffer> {
+    const cached = this.decodedBuffers.get(blob);
+    if (cached) return cached;
     const context = await this.getContext();
-    return context.decodeAudioData(await blob.arrayBuffer());
+    const decoded = await context.decodeAudioData(await blob.arrayBuffer());
+    this.decodedBuffers.set(blob, decoded);
+    return decoded;
   }
 
   async analyse(blob: Blob, bucketCount = 96): Promise<AnalysedAudio> {
@@ -67,7 +72,7 @@ export class AudioEngine {
     ]);
     if (!vocalBuffer && !backingBuffer) throw new Error('Add a vocal or backing track before playing.');
 
-    const startAt = context.currentTime + 0.035;
+    const startAt = context.currentTime + 0.005;
     if (vocalBuffer) {
       const source = context.createBufferSource();
       const gain = context.createGain();
@@ -113,6 +118,11 @@ export class AudioEngine {
   setMixLevels(vocalVolume: number, backingVolume: number): void {
     if (this.vocalGain) this.vocalGain.gain.value = clampMixLevel(vocalVolume);
     if (this.backingGain) this.backingGain.gain.value = clampMixLevel(backingVolume);
+  }
+
+  setEffects(settings: EffectSettings): void {
+    this.playbackChain?.update(settings);
+    this.monitorChain?.update(settings);
   }
 
   get positionSeconds(): number {

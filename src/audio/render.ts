@@ -23,6 +23,7 @@ export function calculateRenderDuration(
 }
 
 export async function renderAudio(request: RenderRequest): Promise<AudioBuffer> {
+  // Offline graph rendering: https://developer.mozilla.org/en-US/docs/Web/API/OfflineAudioContext/startRendering
   const sampleRate = Math.min(48_000, Math.max(44_100, request.vocal.sampleRate));
   const backingDuration = request.vocalOnly ? 0 : request.backing?.duration ?? 0;
   const duration = calculateRenderDuration(

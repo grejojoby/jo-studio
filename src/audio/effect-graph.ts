@@ -3,6 +3,7 @@ import type { EffectSettings } from './types';
 export interface EffectChain {
   input: GainNode;
   output: GainNode;
+  update: (settings: EffectSettings) => void;
   dispose: () => void;
 }
 
@@ -55,33 +56,39 @@ export function createEffectChain(
   const output = context.createGain();
 
   highPass.type = 'highpass';
-  highPass.frequency.value = settings.highPassHz;
   highPass.Q.value = 0.7;
   warmth.type = 'lowshelf';
   warmth.frequency.value = 220;
-  warmth.gain.value = settings.warmthDb;
   presence.type = 'peaking';
   presence.frequency.value = 3_200;
   presence.Q.value = 0.8;
-  presence.gain.value = settings.presenceDb;
   deEsser.type = 'highshelf';
   deEsser.frequency.value = 6_400;
-  deEsser.gain.value = -settings.deEsserDb;
-  compressor.threshold.value = settings.compressorThresholdDb;
-  compressor.ratio.value = settings.compressorRatio;
   compressor.knee.value = 12;
   compressor.attack.value = 0.012;
   compressor.release.value = 0.18;
-  convolver.buffer = createImpulseBuffer(context, settings.reverbSeconds);
-  reverbWet.gain.value = settings.reverbMix;
-  delay.delayTime.value = settings.delayMs / 1_000;
-  delayFeedback.gain.value = settings.delayFeedback;
-  delayWet.gain.value = settings.delayMix;
-  limiter.threshold.value = settings.limiterThresholdDb;
   limiter.ratio.value = 20;
   limiter.knee.value = 0;
   limiter.attack.value = 0.003;
   limiter.release.value = 0.12;
+
+  const update = (next: EffectSettings) => {
+    const now = context.currentTime;
+    highPass.frequency.setTargetAtTime(next.highPassHz, now, 0.01);
+    warmth.gain.setTargetAtTime(next.warmthDb, now, 0.01);
+    presence.gain.setTargetAtTime(next.presenceDb, now, 0.01);
+    deEsser.gain.setTargetAtTime(-next.deEsserDb, now, 0.01);
+    compressor.threshold.setTargetAtTime(next.compressorThresholdDb, now, 0.01);
+    compressor.ratio.setTargetAtTime(next.compressorRatio, now, 0.01);
+    reverbWet.gain.setTargetAtTime(next.reverbMix, now, 0.01);
+    delay.delayTime.setTargetAtTime(next.delayMs / 1_000, now, 0.01);
+    delayFeedback.gain.setTargetAtTime(next.delayFeedback, now, 0.01);
+    delayWet.gain.setTargetAtTime(next.delayMix, now, 0.01);
+    limiter.threshold.setTargetAtTime(next.limiterThresholdDb, now, 0.01);
+    convolver.buffer = createImpulseBuffer(context, next.reverbSeconds);
+  };
+
+  update(settings);
 
   input.connect(highPass).connect(warmth).connect(presence).connect(deEsser).connect(compressor);
   compressor.connect(dry).connect(mix);
@@ -96,6 +103,7 @@ export function createEffectChain(
   return {
     input,
     output,
+    update,
     dispose: () => nodes.forEach((node) => node.disconnect()),
   };
 }
