@@ -1,0 +1,11 @@
+.git
+.gitignore
+node_modules
+dist
+coverage
+.env*
+*.log
+tasks
+docs
+SPEC*.md
+CAPABILITY_MAP.md
