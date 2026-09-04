@@ -20,7 +20,7 @@
 
 ## Session and engine
 
-- [ ] Persist and restore the current project in IndexedDB.
+- [x] Persist and restore the current project in IndexedDB.
   - Acceptance: blobs and settings survive a database reopen; clearing deletes them.
   - Verify: `npm test -- --run src/storage`
   - Files: `src/storage/project-store.ts`, test, domain model
