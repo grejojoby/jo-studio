@@ -34,7 +34,7 @@ export function App() {
               onVocal={(file) => void studio.importVocal(file)} onRemoveBacking={studio.removeBacking}
               onChooseTake={studio.chooseTake} onRemoveTake={studio.removeTake}
               onNewTake={() => void studio.toggleRecording()}
-              onLevel={studio.updateLevel} onMonitoring={studio.updateMonitoring}
+              levels={studio.levels} onLevel={studio.updateLevel} onMonitoring={studio.updateMonitoring}
               transport={<Transport canPlay={canPlay} disabled={controlsDisabled} recording={studio.isRecording}
                 playing={studio.isPlaying} positionSeconds={studio.positionSeconds}
                 onRecord={() => void studio.toggleRecording()} onPlay={() => void studio.togglePreview()} />} />

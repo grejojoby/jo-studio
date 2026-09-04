@@ -10,6 +10,23 @@ export interface AnalysedAudio {
   peaks: number[];
 }
 
+export interface LiveLevels {
+  vocal: number;
+  backing: number;
+}
+
+const METER_FLOOR_DB = -48;
+const METER_CEILING_DB = 6;
+
+export function meterLevel(samples: Float32Array): number {
+  let sum = 0;
+  for (const sample of samples) sum += sample * sample;
+  const rms = Math.sqrt(sum / Math.max(1, samples.length));
+  if (rms === 0) return 0;
+  const db = 20 * Math.log10(rms);
+  return clampMixLevel((db - METER_FLOOR_DB) / (METER_CEILING_DB - METER_FLOOR_DB));
+}
+
 export interface PlaybackRequest {
   vocal?: Blob;
   backing?: Blob;
@@ -35,6 +52,10 @@ export class AudioEngine {
   private playbackChain?: EffectChain;
   private monitorChain?: EffectChain;
   private monitorSource?: MediaStreamAudioSourceNode;
+  private inputSource?: MediaStreamAudioSourceNode;
+  private inputAnalyser?: AnalyserNode;
+  private vocalAnalyser?: AnalyserNode;
+  private backingAnalyser?: AnalyserNode;
   private vocalGain?: GainNode;
   private backingGain?: GainNode;
   private playbackStartedAt = 0;
@@ -81,6 +102,8 @@ export class AudioEngine {
       gain.gain.value = clampMixLevel(request.vocalVolume);
       source.connect(gain).connect(chain.input);
       chain.output.connect(context.destination);
+      this.vocalAnalyser = this.createAnalyser(context);
+      gain.connect(this.vocalAnalyser);
       source.start(startAt);
       this.vocalGain = gain;
       this.playbackChain = chain;
@@ -92,6 +115,8 @@ export class AudioEngine {
       source.buffer = backingBuffer;
       gain.gain.value = clampMixLevel(request.backingVolume);
       source.connect(gain).connect(context.destination);
+      this.backingAnalyser = this.createAnalyser(context);
+      gain.connect(this.backingAnalyser);
       source.start(startAt);
       this.backingGain = gain;
       this.playbackSources.push(source);
@@ -100,6 +125,42 @@ export class AudioEngine {
     this.playbackStartedAt = startAt;
     this.playbackDuration = Math.max(vocalBuffer?.duration ?? 0, backingBuffer?.duration ?? 0);
     return this.playbackDuration;
+  }
+
+  async startInputMeter(stream: MediaStream): Promise<void> {
+    this.stopInputMeter();
+    const context = await this.getContext();
+    const source = context.createMediaStreamSource(stream);
+    const analyser = this.createAnalyser(context);
+    source.connect(analyser);
+    this.inputSource = source;
+    this.inputAnalyser = analyser;
+  }
+
+  stopInputMeter(): void {
+    this.inputSource?.disconnect();
+    this.inputSource = undefined;
+    this.inputAnalyser = undefined;
+  }
+
+  get levels(): LiveLevels {
+    return {
+      vocal: Math.max(this.readLevel(this.inputAnalyser), this.readLevel(this.vocalAnalyser)),
+      backing: this.readLevel(this.backingAnalyser),
+    };
+  }
+
+  private createAnalyser(context: AudioContext): AnalyserNode {
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    return analyser;
+  }
+
+  private readLevel(analyser?: AnalyserNode): number {
+    if (!analyser) return 0;
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    return meterLevel(samples);
   }
 
   async startMonitor(stream: MediaStream, settings: EffectSettings, volume: number): Promise<void> {
@@ -144,6 +205,8 @@ export class AudioEngine {
     this.playbackChain = undefined;
     this.vocalGain = undefined;
     this.backingGain = undefined;
+    this.vocalAnalyser = undefined;
+    this.backingAnalyser = undefined;
     this.playbackDuration = 0;
   }
 
@@ -157,6 +220,7 @@ export class AudioEngine {
   async dispose(): Promise<void> {
     this.stopPlayback();
     this.stopMonitor();
+    this.stopInputMeter();
     await this.context?.close();
     this.context = undefined;
   }

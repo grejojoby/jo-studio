@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AudioEngine, assertUsableAudioFile } from '../audio/audio-engine';
+import { AudioEngine, assertUsableAudioFile, type LiveLevels } from '../audio/audio-engine';
 import { encodeMp3Blob, encodeWavBlob } from '../audio/encode';
 import { MicrophoneRecorder } from '../audio/microphone-recorder';
 import { renderAudio } from '../audio/render';
@@ -37,12 +37,13 @@ export function useStudio() {
   const [isPlaying, setPlaying] = useState(false);
   const [isExporting, setExporting] = useState(false);
   const [positionSeconds, setPositionSeconds] = useState(0);
+  const [levels, setLevels] = useState<LiveLevels>({ vocal: 0, backing: 0 });
   const [status, setStatus] = useState('Ready when you are.');
   const [error, setError] = useState<string>();
   const engine = useMemo(() => new AudioEngine(), []);
   const recorder = useMemo(() => new MicrophoneRecorder(), []);
   const store = useMemo(() => new ProjectStore(), []);
-  const playbackTimer = useRef<number | undefined>(undefined);
+  const ticker = useRef<number | undefined>(undefined);
 
   const selectedTake = project.takes.find((take) => take.id === project.selectedTakeId);
 
@@ -64,7 +65,7 @@ export function useStudio() {
   }, [isReady, project, store]);
 
   useEffect(() => () => {
-    if (playbackTimer.current) window.clearInterval(playbackTimer.current);
+    if (ticker.current) window.clearInterval(ticker.current);
     void engine.dispose();
     store.close();
   }, [engine, store]);
@@ -100,13 +101,23 @@ export function useStudio() {
     } catch (cause) { setError(errorMessage(cause)); setStatus('Vocal not added.'); }
   }, [analyseAsset]);
 
+  const stopTicker = useCallback(() => {
+    if (ticker.current) window.clearInterval(ticker.current);
+    ticker.current = undefined;
+    setPositionSeconds(0);
+    setLevels({ vocal: 0, backing: 0 });
+  }, []);
+
+  const startTicker = useCallback((tick: () => void) => {
+    if (ticker.current) window.clearInterval(ticker.current);
+    ticker.current = window.setInterval(() => { setLevels(engine.levels); tick(); }, 50);
+  }, [engine]);
+
   const stopPreview = useCallback(() => {
     engine.stopPlayback();
-    if (playbackTimer.current) window.clearInterval(playbackTimer.current);
-    playbackTimer.current = undefined;
+    stopTicker();
     setPlaying(false);
-    setPositionSeconds(0);
-  }, [engine]);
+  }, [engine, stopTicker]);
 
   const togglePreview = useCallback(async () => {
     if (isPlaying) { stopPreview(); return; }
@@ -121,17 +132,19 @@ export function useStudio() {
       });
       setPlaying(true);
       setStatus('Playing your current mix.');
-      playbackTimer.current = window.setInterval(() => {
+      startTicker(() => {
         setPositionSeconds(engine.positionSeconds);
         if (!engine.isPlaying) { stopPreview(); setStatus('Preview finished.'); }
-      }, 100);
+      });
     } catch (cause) { setError(errorMessage(cause)); }
-  }, [engine, isPlaying, project, selectedTake, stopPreview]);
+  }, [engine, isPlaying, project, selectedTake, startTicker, stopPreview]);
 
   const toggleRecording = useCallback(async () => {
     setError(undefined);
     if (isRecording) {
       setRecording(false);
+      stopTicker();
+      engine.stopInputMeter();
       engine.stopMonitor();
       engine.stopPlayback();
       setStatus('Finishing your take…');
@@ -156,6 +169,7 @@ export function useStudio() {
     try {
       if (project.backing) await engine.decode(project.backing.blob);
       const stream = await recorder.start();
+      await engine.startInputMeter(stream);
       if (project.monitorEnabled) await engine.startMonitor(stream, project.effects, project.vocalVolume);
       if (project.backing) {
         await engine.startPlayback({
@@ -163,16 +177,19 @@ export function useStudio() {
           vocalVolume: project.vocalVolume, backingVolume: project.backingVolume,
         });
       }
+      const startedAt = performance.now();
+      startTicker(() => setPositionSeconds((performance.now() - startedAt) / 1_000));
       setRecording(true);
       setStatus(project.monitorEnabled ? 'Recording with effects in your headphones.' : 'Recording a dry take.');
     } catch (cause) {
       if (recorder.isRecording) await recorder.stop().catch(() => undefined);
+      engine.stopInputMeter();
       engine.stopMonitor();
       engine.stopPlayback();
       setError(errorMessage(cause));
       setStatus('Recording did not start.');
     }
-  }, [engine, isRecording, project, recorder, stopPreview]);
+  }, [engine, isRecording, project, recorder, startTicker, stopPreview, stopTicker]);
 
   const exportAudio = useCallback(async (format: ExportFormat, target: ExportTarget) => {
     if (!selectedTake) return;
@@ -206,7 +223,7 @@ export function useStudio() {
 
   return {
     project, selectedTake, isReady, isRecording, isPlaying, isExporting,
-    positionSeconds, status, error, importBacking, importVocal, togglePreview,
+    positionSeconds, levels, status, error, importBacking, importVocal, togglePreview,
     toggleRecording, exportAudio, clearSession,
     removeBacking: () => setProject((current) => setBacking(current)),
     chooseTake: (id: string) => setProject((current) => selectTake(current, id)),

@@ -1,5 +1,6 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { formatDuration } from '../audio/waveform';
+import type { LiveLevels } from '../audio/audio-engine';
 import type { StudioProject, VocalTake } from '../studio-model';
 import { CloseIcon, HeadphonesIcon, MicIcon, PlayIcon, PlusIcon, SpeakerIcon } from './Icons';
 import { Waveform } from './Waveform';
@@ -14,6 +15,7 @@ interface TrackWorkspaceProps {
   onChooseTake: (id: string) => void;
   onRemoveTake: (id: string) => void;
   onNewTake: () => void;
+  levels: LiveLevels;
   onLevel: (track: 'vocalVolume' | 'backingVolume', value: number) => void;
   onMonitoring: (enabled: boolean) => void;
   transport: ReactNode;
@@ -63,7 +65,7 @@ function Fader({ label, value, disabled, onChange }: { label: string; value: num
 }
 
 export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onVocal, onRemoveBacking,
-  onChooseTake, onRemoveTake, onNewTake, onLevel, onMonitoring, transport }: TrackWorkspaceProps) {
+  onChooseTake, onRemoveTake, onNewTake, levels, onLevel, onMonitoring, transport }: TrackWorkspaceProps) {
   const takeLabel = (take: VocalTake) => take.name.split(' · ')[0];
 
   return (
@@ -113,7 +115,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
           <div className="channel-strip backing-strip">
             <span className="strip-label">Backing</span>
             <div className="strip-controls">
-              <Meter level={project.backingVolume} />
+              <Meter level={levels.backing} />
               <Fader label="Backing level" value={project.backingVolume} disabled={disabled}
                 onChange={(value) => onLevel('backingVolume', value)} />
             </div>
@@ -125,7 +127,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
           <div className="channel-strip vocal-strip">
             <span className="strip-label">Lead vocal</span>
             <div className="strip-controls">
-              <Meter level={project.vocalVolume} />
+              <Meter level={levels.vocal} />
               <Fader label="Vocal level" value={project.vocalVolume} disabled={disabled}
                 onChange={(value) => onLevel('vocalVolume', value)} />
             </div>
