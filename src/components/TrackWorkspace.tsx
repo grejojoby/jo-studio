@@ -22,6 +22,20 @@ function chosenFile(event: ChangeEvent<HTMLInputElement>, action: (file: File) =
   event.target.value = '';
 }
 
+const idleBackingPeaks = [0.08, 0.18, 0.12, 0.28, 0.2, 0.34, 0.16, 0.24, 0.38, 0.2, 0.3, 0.16,
+  0.26, 0.42, 0.24, 0.32, 0.18, 0.28, 0.14, 0.35, 0.2, 0.3, 0.12, 0.22];
+const idleVocalPeaks = [0.04, 0.08, 0.12, 0.3, 0.62, 0.34, 0.2, 0.44, 0.76, 0.38, 0.18, 0.26,
+  0.58, 0.84, 0.42, 0.2, 0.32, 0.68, 0.36, 0.18, 0.48, 0.72, 0.3, 0.1];
+
+function EmptyTrack({ message, active = false }: { message: string; active?: boolean }) {
+  return (
+    <div className="empty-lane">
+      <Waveform peaks={active ? idleVocalPeaks : idleBackingPeaks} active={active} />
+      <p>{message}</p>
+    </div>
+  );
+}
+
 export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onVocal,
   onRemoveBacking, onChooseTake, onRemoveTake, onLevel, onMonitoring }: TrackWorkspaceProps) {
   return (
@@ -53,7 +67,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
             <div className="asset-meta"><strong>{project.backing.name}</strong><span>{formatDuration(project.backing.durationSeconds)}</span></div>
             <Waveform peaks={project.backing.peaks} />
           </div>
-        ) : <p className="empty-lane">Optional — add a track before recording to sing along.</p>}
+        ) : <EmptyTrack message="Add a backing track to sing along." />}
         <label className="track-volume">
           <span>Backing level</span>
           <input type="range" min="0" max="1" step="0.01" value={project.backingVolume}
@@ -77,7 +91,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
             <div className="asset-meta"><strong>{selectedTake.name}</strong><span>{formatDuration(selectedTake.durationSeconds)}</span></div>
             <Waveform peaks={selectedTake.peaks} active />
           </div>
-        ) : <p className="empty-lane">Your selected take will appear here.</p>}
+        ) : <EmptyTrack message="Record or import your lead vocal." active />}
         <div className="vocal-settings">
           <label className="track-volume">
             <span>Vocal level</span>

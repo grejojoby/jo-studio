@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { EFFECT_RANGES, PRESETS } from '../audio/presets';
 import type { EffectSettings, MacroSettings, PresetId } from '../audio/types';
 import type { StudioProject } from '../studio-model';
@@ -39,6 +39,8 @@ const advanced: Array<{
   { key: 'delayMix', label: 'Delay mix', step: 0.01, suffix: '' },
 ];
 
+type DialStyle = CSSProperties & { '--dial-value': number };
+
 export function EffectControls({ project, disabled, onPreset, onMacro, onEffect }: EffectControlsProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -71,11 +73,15 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
 
       <div className="macro-list">
         {macros.map(({ key, label, hint }) => (
-          <label className="macro-control" key={key}>
+          <label className="macro-control" key={key}
+            style={{ '--dial-value': project.macros[key] } as DialStyle}>
             <span className="control-copy"><strong>{label}</strong><small>{hint}</small></span>
-            <input type="range" min="0" max="100" value={project.macros[key]} disabled={disabled}
-              aria-label={label} onChange={(event) => onMacro(key, Number(event.target.value))} />
-            <output>{Math.round(project.macros[key])}</output>
+            <span className="macro-dial">
+              <span className="dial-face" aria-hidden="true"><span className="dial-pointer" /></span>
+              <input className="dial-input" type="range" min="0" max="100" value={project.macros[key]} disabled={disabled}
+                aria-label={label} onChange={(event) => onMacro(key, Number(event.target.value))} />
+            </span>
+            <output>{Math.round(project.macros[key])}<span>%</span></output>
           </label>
         ))}
       </div>

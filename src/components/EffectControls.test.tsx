@@ -6,9 +6,10 @@ import { EffectControls } from './EffectControls';
 describe('EffectControls', () => {
   it('keeps the default surface to five plain-language controls', () => {
     const project = createDefaultProject();
-    render(<EffectControls project={project} disabled={false} onPreset={vi.fn()} onMacro={vi.fn()} onEffect={vi.fn()} />);
+    const { container } = render(<EffectControls project={project} disabled={false} onPreset={vi.fn()} onMacro={vi.fn()} onEffect={vi.fn()} />);
 
     expect(screen.getAllByRole('slider')).toHaveLength(5);
+    expect(container.querySelectorAll('.macro-dial')).toHaveLength(5);
     expect(screen.getByRole('button', { name: /advanced controls/i })).toHaveAttribute('aria-expanded', 'false');
   });
 

@@ -15,12 +15,12 @@ export function Transport({ canPlay, disabled, recording, playing, positionSecon
     <div className="transport" aria-label="Studio transport">
       <button className="record-button" type="button" disabled={disabled && !recording}
         aria-pressed={recording} onClick={onRecord}>
-        <span className="record-dot" aria-hidden="true" />
-        {recording ? 'Stop & keep take' : 'Record a take'}
+        <span className="record-core" aria-hidden="true"><span className="record-dot" /></span>
+        <span>{recording ? 'Stop & keep take' : 'Record a take'}</span>
       </button>
       <button className="play-button" type="button" disabled={!canPlay || disabled}
         aria-pressed={playing} onClick={onPlay}>
-        <span aria-hidden="true">{playing ? '■' : '▶'}</span>
+        <span className="play-icon" aria-hidden="true">{playing ? '■' : '▶'}</span>
         {playing ? 'Stop preview' : 'Preview'}
       </button>
       <output className="transport-time" aria-label="Playback position">{formatDuration(positionSeconds)}</output>
