@@ -9,11 +9,11 @@
 
 ## Audio domain
 
-- [ ] Implement safe preset/macro mapping and waveform utilities test-first.
+- [x] Implement safe preset/macro mapping and waveform utilities test-first.
   - Acceptance: every preset and user setting remains inside documented safe ranges.
   - Verify: `npm test -- --run src/audio`
   - Files: `src/audio/types.ts`, `src/audio/presets.ts`, colocated tests
-- [ ] Implement WAV/MP3 encoding preparation test-first.
+- [x] Implement WAV/MP3 encoding preparation test-first.
   - Acceptance: WAV headers/sample data are valid and MP3 receives bounded PCM frames.
   - Verify: `npm test -- --run src/audio/encode.test.ts`
   - Files: `src/audio/encode.ts`, `src/audio/encode.test.ts`
