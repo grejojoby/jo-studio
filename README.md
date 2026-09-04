@@ -10,6 +10,14 @@ docker compose up --build
 
 Open [http://localhost:8080](http://localhost:8080). Use headphones before enabling effect monitoring. Stop the app with `docker compose down`.
 
+### Prebuilt image
+
+GitHub Actions builds a multi-architecture image (`linux/amd64` and `linux/arm64`) on every push to `main` and on `v*` tags, and publishes it to GitHub Container Registry:
+
+```bash
+docker run --rm -p 127.0.0.1:8080:8080 ghcr.io/grejojoby/jo-studio:latest
+```
+
 ## Local development
 
 ```bash
