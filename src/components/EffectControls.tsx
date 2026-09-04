@@ -11,12 +11,12 @@ interface EffectControlsProps {
   onEffect: (name: keyof EffectSettings, value: number) => void;
 }
 
-const macros: Array<{ key: keyof MacroSettings; label: string; hint: string }> = [
-  { key: 'clarity', label: 'Clarity', hint: 'Bring words gently forward' },
-  { key: 'warmth', label: 'Warmth', hint: 'Add a little body' },
-  { key: 'smoothness', label: 'Smoothness', hint: 'Settle sharp edges' },
-  { key: 'reverb', label: 'Reverb', hint: 'Place the voice in a room' },
-  { key: 'delay', label: 'Delay', hint: 'Add a quiet echo' },
+const macros: Array<{ key: keyof MacroSettings; label: string; hint: string; icon: string }> = [
+  { key: 'clarity', label: 'Clarity', hint: 'Bring words gently forward', icon: '⌁' },
+  { key: 'warmth', label: 'Warmth', hint: 'Add a little body', icon: '≈' },
+  { key: 'smoothness', label: 'Smoothness', hint: 'Settle sharp edges', icon: '≋' },
+  { key: 'reverb', label: 'Reverb', hint: 'Place the voice in a room', icon: '◉' },
+  { key: 'delay', label: 'Delay', hint: 'Add a quiet echo', icon: '◌' },
 ];
 
 const advanced: Array<{
@@ -45,13 +45,13 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
-    <section className="effects-panel" aria-labelledby="sound-heading">
+    <section className="effects-panel sound-rack" aria-labelledby="sound-heading">
       <div className="section-heading-row">
         <div>
-          <p className="section-number">02 / tone desk</p>
-          <h2 id="sound-heading">Shape the room.</h2>
+          <p className="section-number">Vocal finish</p>
+          <h2 id="sound-heading">Sound</h2>
         </div>
-        <span className="subtle-label">live · non-destructive</span>
+        <span className="subtle-label">Live · non-destructive</span>
       </div>
 
       <div className="preset-group" role="group" aria-label="Vocal presets">
@@ -72,9 +72,10 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
       </div>
 
       <div className="macro-list">
-        {macros.map(({ key, label, hint }) => (
+        {macros.map(({ key, label, hint, icon }) => (
           <label className="macro-control" key={key}
             style={{ '--dial-value': project.macros[key] } as DialStyle}>
+            <span className="control-icon" aria-hidden="true">{icon}</span>
             <span className="control-copy"><strong>{label}</strong><small>{hint}</small></span>
             <span className="macro-dial">
               <span className="dial-face" aria-hidden="true"><span className="dial-pointer" /></span>

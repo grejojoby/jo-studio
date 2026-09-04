@@ -7,8 +7,13 @@ describe('App', () => {
     const { container } = render(<App />);
 
     expect(container.querySelector('.studio-console')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: /voice in focus/i })).toBeInTheDocument();
-    expect(screen.getByText(/audio stays in this browser/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /vocal study/i })).toBeInTheDocument();
+    expect(screen.getByText(/local and private/i)).toBeInTheDocument();
+    expect(container.querySelector('.waveform-stage')).toBeInTheDocument();
+    expect(container.querySelector('.mixer-stage')).toBeInTheDocument();
+    expect(container.querySelector('.takes-deck')).toBeInTheDocument();
+    expect(container.querySelector('.sound-rack')).toBeInTheDocument();
+    expect(container.querySelector('.console-footer')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /record a take/i })).toBeEnabled();
     expect(screen.getByLabelText(/import vocal/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/add backing track/i)).toBeInTheDocument();

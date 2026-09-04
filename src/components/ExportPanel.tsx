@@ -9,6 +9,7 @@ interface ExportPanelProps {
 }
 
 export function ExportPanel({ disabled, exporting, hasBacking, onExport }: ExportPanelProps) {
+  const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<ExportFormat>('wav');
   const [target, setTarget] = useState<ExportTarget>(() => hasBacking ? 'mix' : 'vocal');
 
@@ -17,13 +18,14 @@ export function ExportPanel({ disabled, exporting, hasBacking, onExport }: Expor
   }, [hasBacking, target]);
 
   return (
-    <section className="export-panel" aria-labelledby="export-heading">
-      <div>
-        <p className="section-number">03 / bounce</p>
-        <h2 id="export-heading">Master out.</h2>
-        <p>Rendered on this device.</p>
-      </div>
-      <div className="export-options">
+    <div className="export-panel">
+      <button className="export-trigger" type="button" disabled={disabled || exporting}
+        aria-expanded={open} aria-controls="export-options" aria-label="Export audio"
+        onClick={() => setOpen((visible) => !visible)}>
+        {exporting ? 'Rendering…' : 'Export'} <span aria-hidden="true">↗</span>
+      </button>
+      {open && <div className="export-options" id="export-options" role="group" aria-label="Export options">
+        <div className="export-popover-heading"><strong>Export master</strong><span>Rendered on this device</span></div>
         <label>Audio file
           <select value={format} disabled={exporting} onChange={(event) => setFormat(event.target.value as ExportFormat)}>
             <option value="wav">WAV · lossless</option>
@@ -37,10 +39,10 @@ export function ExportPanel({ disabled, exporting, hasBacking, onExport }: Expor
           </select>
         </label>
         <button className="export-button" type="button" disabled={disabled || exporting}
-          onClick={() => onExport(format, target)}>
-          {exporting ? 'Rendering…' : 'Export audio'} <span aria-hidden="true">↗</span>
+          onClick={() => { onExport(format, target); setOpen(false); }}>
+          {exporting ? 'Rendering…' : `Render ${format.toUpperCase()}`} <span aria-hidden="true">↗</span>
         </button>
-      </div>
-    </section>
+      </div>}
+    </div>
   );
 }
