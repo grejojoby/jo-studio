@@ -28,15 +28,15 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
     <section className="track-workspace" aria-labelledby="tracks-heading">
       <div className="section-heading-row">
         <div>
-          <p className="section-number">01 / tracks</p>
-          <h2 id="tracks-heading">Two tracks. Nothing in the way.</h2>
+          <p className="section-number">01 / arrangement</p>
+          <h2 id="tracks-heading">Two tracks. One take.</h2>
         </div>
-        <span className="subtle-label">dry originals kept</span>
+        <span className="subtle-label">dry masters kept</span>
       </div>
 
       <article className="track-lane backing-lane">
         <header className="lane-header">
-          <div><span className="track-index">B</span><div><h3>Backing</h3><p>Karaoke or minimal accompaniment</p></div></div>
+          <div><span className="track-index">B</span><div><h3>Backing</h3><p>Karaoke · accompaniment</p></div></div>
           <div className="lane-actions">
             <input className="visually-hidden" id="backing-file" type="file" accept="audio/*"
               disabled={disabled} aria-label="Add backing track"
@@ -64,7 +64,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
 
       <article className="track-lane vocal-lane">
         <header className="lane-header">
-          <div><span className="track-index vocal-index">V</span><div><h3>Lead vocal</h3><p>Record live or bring a dry vocal</p></div></div>
+          <div><span className="track-index vocal-index">V</span><div><h3>Lead vocal</h3><p>Live take · dry import</p></div></div>
           <div className="lane-actions">
             <input className="visually-hidden" id="vocal-file" type="file" accept="audio/*"
               disabled={disabled} aria-label="Import vocal"

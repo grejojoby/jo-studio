@@ -46,10 +46,10 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
     <section className="effects-panel" aria-labelledby="sound-heading">
       <div className="section-heading-row">
         <div>
-          <p className="section-number">03 / sound</p>
-          <h2 id="sound-heading">Keep it believable.</h2>
+          <p className="section-number">02 / tone desk</p>
+          <h2 id="sound-heading">Shape the room.</h2>
         </div>
-        <span className="subtle-label">non-destructive</span>
+        <span className="subtle-label">live · non-destructive</span>
       </div>
 
       <div className="preset-group" role="group" aria-label="Vocal presets">
@@ -85,19 +85,26 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
         Advanced controls <span aria-hidden="true">{advancedOpen ? '−' : '+'}</span>
       </button>
 
-      <div id="advanced-controls" className="advanced-grid" hidden={!advancedOpen}>
-        {advanced.map(({ key, label, step, suffix }) => {
-          const range = EFFECT_RANGES[key];
-          return (
-            <label key={key}>
-              <span>{label}</span>
-              <input type="range" min={range.min} max={range.max} step={step} value={project.effects[key]}
-                disabled={disabled} aria-label={label}
-                onChange={(event) => onEffect(key, Number(event.target.value))} />
-              <output>{Number(project.effects[key].toFixed(2))}{suffix}</output>
-            </label>
-          );
-        })}
+      <div id="advanced-controls" className="advanced-surface" hidden={!advancedOpen}>
+        <div className="advanced-heading">
+          <div><p className="section-number">Fine controls</p><h3>Under the surface.</h3></div>
+          <button className="icon-button" type="button" onClick={() => setAdvancedOpen(false)}
+            aria-label="Close fine controls">×</button>
+        </div>
+        <div className="advanced-grid">
+          {advanced.map(({ key, label, step, suffix }) => {
+            const range = EFFECT_RANGES[key];
+            return (
+              <label key={key}>
+                <span>{label}</span>
+                <input type="range" min={range.min} max={range.max} step={step} value={project.effects[key]}
+                  disabled={disabled} aria-label={label}
+                  onChange={(event) => onEffect(key, Number(event.target.value))} />
+                <output>{Number(project.effects[key].toFixed(2))}{suffix}</output>
+              </label>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

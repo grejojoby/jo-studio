@@ -19,9 +19,9 @@ export function ExportPanel({ disabled, exporting, hasBacking, onExport }: Expor
   return (
     <section className="export-panel" aria-labelledby="export-heading">
       <div>
-        <p className="section-number">04 / finish</p>
-        <h2 id="export-heading">Take it with you.</h2>
-        <p>Rendered here on your device. WAV keeps full quality; MP3 is easier to share.</p>
+        <p className="section-number">03 / bounce</p>
+        <h2 id="export-heading">Master out.</h2>
+        <p>Rendered on this device.</p>
       </div>
       <div className="export-options">
         <label>Audio file

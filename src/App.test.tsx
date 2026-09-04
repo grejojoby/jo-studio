@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { App } from './App';
 
 describe('App', () => {
-  it('introduces the private studio and exposes the complete simple workflow', () => {
-    render(<App />);
+  it('presents the complete workflow inside a single studio console', () => {
+    const { container } = render(<App />);
 
-    expect(screen.getByRole('heading', { level: 1, name: /make room for your voice/i })).toBeInTheDocument();
+    expect(container.querySelector('.studio-console')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /voice in focus/i })).toBeInTheDocument();
     expect(screen.getByText(/audio stays in this browser/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /record a take/i })).toBeEnabled();
     expect(screen.getByLabelText(/import vocal/i)).toBeInTheDocument();

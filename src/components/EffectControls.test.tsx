@@ -22,4 +22,15 @@ describe('EffectControls', () => {
     expect(screen.getByRole('slider', { name: /de-esser/i })).toBeVisible();
     expect(screen.getByRole('slider', { name: /limiter ceiling/i })).toBeVisible();
   });
+
+  it('closes the detailed controls without changing the main sound desk', () => {
+    const project = createDefaultProject();
+    render(<EffectControls project={project} disabled={false} onPreset={vi.fn()} onMacro={vi.fn()} onEffect={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /advanced controls/i }));
+    fireEvent.click(screen.getByRole('button', { name: /close fine controls/i }));
+
+    expect(screen.getByRole('button', { name: /advanced controls/i })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('slider', { name: /high-pass filter/i })).not.toBeInTheDocument();
+  });
 });

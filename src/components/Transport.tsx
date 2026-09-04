@@ -24,7 +24,7 @@ export function Transport({ canPlay, disabled, recording, playing, positionSecon
         {playing ? 'Stop preview' : 'Preview'}
       </button>
       <output className="transport-time" aria-label="Playback position">{formatDuration(positionSeconds)}</output>
-      <p><span aria-hidden="true">⌁</span> Headphones make monitoring safer.</p>
+      <p><span aria-hidden="true">⌁</span> Monitor with headphones</p>
     </div>
   );
 }
