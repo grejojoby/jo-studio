@@ -12,12 +12,10 @@ export function App() {
   return (
     <div className="app-shell studio-console">
       <header className="studio-bar">
-        <a className="wordmark" href="#studio" aria-label="Hushline home">
-          Hushline<span aria-hidden="true">.</span>
-        </a>
+        <a className="wordmark" href="#studio" aria-label="Hushline home">Hushline</a>
         <h1 className="session-title">Vocal study</h1>
         <div className="header-actions">
-          <p className="privacy-note"><span className="privacy-dot" aria-hidden="true" />Local and private</p>
+          <p className="privacy-note"><span className="privacy-dot" aria-hidden="true" />Local &amp; private</p>
           <ExportPanel disabled={!studio.selectedTake || studio.isRecording} exporting={studio.isExporting}
             hasBacking={Boolean(studio.project.backing)}
             onExport={(format, target) => void studio.exportAudio(format, target)} />
@@ -35,6 +33,7 @@ export function App() {
               disabled={controlsDisabled} onBacking={(file) => void studio.importBacking(file)}
               onVocal={(file) => void studio.importVocal(file)} onRemoveBacking={studio.removeBacking}
               onChooseTake={studio.chooseTake} onRemoveTake={studio.removeTake}
+              onNewTake={() => void studio.toggleRecording()}
               onLevel={studio.updateLevel} onMonitoring={studio.updateMonitoring}
               transport={<Transport canPlay={canPlay} disabled={controlsDisabled} recording={studio.isRecording}
                 playing={studio.isPlaying} positionSeconds={studio.positionSeconds}

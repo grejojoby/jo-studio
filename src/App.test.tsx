@@ -8,7 +8,7 @@ describe('App', () => {
 
     expect(container.querySelector('.studio-console')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: /vocal study/i })).toBeInTheDocument();
-    expect(screen.getByText(/local and private/i)).toBeInTheDocument();
+    expect(screen.getByText(/local & private/i)).toBeInTheDocument();
     expect(container.querySelector('.waveform-stage')).toBeInTheDocument();
     expect(container.querySelector('.mixer-stage')).toBeInTheDocument();
     expect(container.querySelector('.takes-deck')).toBeInTheDocument();

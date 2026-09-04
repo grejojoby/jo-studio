@@ -1,7 +1,8 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ComponentType } from 'react';
 import { EFFECT_RANGES, PRESETS } from '../audio/presets';
 import type { EffectSettings, MacroSettings, PresetId } from '../audio/types';
 import type { StudioProject } from '../studio-model';
+import { ChevronIcon, ClarityIcon, CloseIcon, DelayIcon, ReverbIcon, SmoothnessIcon, WarmthIcon } from './Icons';
 
 interface EffectControlsProps {
   project: StudioProject;
@@ -11,12 +12,12 @@ interface EffectControlsProps {
   onEffect: (name: keyof EffectSettings, value: number) => void;
 }
 
-const macros: Array<{ key: keyof MacroSettings; label: string; hint: string; icon: string }> = [
-  { key: 'clarity', label: 'Clarity', hint: 'Bring words gently forward', icon: '⌁' },
-  { key: 'warmth', label: 'Warmth', hint: 'Add a little body', icon: '≈' },
-  { key: 'smoothness', label: 'Smoothness', hint: 'Settle sharp edges', icon: '≋' },
-  { key: 'reverb', label: 'Reverb', hint: 'Place the voice in a room', icon: '◉' },
-  { key: 'delay', label: 'Delay', hint: 'Add a quiet echo', icon: '◌' },
+const macros: Array<{ key: keyof MacroSettings; label: string; Icon: ComponentType }> = [
+  { key: 'clarity', label: 'Clarity', Icon: ClarityIcon },
+  { key: 'warmth', label: 'Warmth', Icon: WarmthIcon },
+  { key: 'smoothness', label: 'Smoothness', Icon: SmoothnessIcon },
+  { key: 'reverb', label: 'Reverb', Icon: ReverbIcon },
+  { key: 'delay', label: 'Delay', Icon: DelayIcon },
 ];
 
 const advanced: Array<{
@@ -46,13 +47,7 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
 
   return (
     <section className="effects-panel sound-rack" aria-labelledby="sound-heading">
-      <div className="section-heading-row">
-        <div>
-          <p className="section-number">Vocal finish</p>
-          <h2 id="sound-heading">Sound</h2>
-        </div>
-        <span className="subtle-label">Live · non-destructive</span>
-      </div>
+      <h2 id="sound-heading">Sound</h2>
 
       <div className="preset-group" role="group" aria-label="Vocal presets">
         {PRESETS.map((preset) => (
@@ -63,40 +58,43 @@ export function EffectControls({ project, disabled, onPreset, onMacro, onEffect 
             key={preset.id}
             disabled={disabled}
             aria-pressed={project.presetId === preset.id}
+            title={preset.description}
             onClick={() => onPreset(preset.id)}
           >
-            <span>{preset.name}</span>
-            <small>{preset.voice}</small>
+            {preset.name}
           </button>
         ))}
       </div>
 
       <div className="macro-list">
-        {macros.map(({ key, label, hint, icon }) => (
+        {macros.map(({ key, label, Icon }) => (
           <label className="macro-control" key={key}
             style={{ '--dial-value': project.macros[key] } as DialStyle}>
-            <span className="control-icon" aria-hidden="true">{icon}</span>
-            <span className="control-copy"><strong>{label}</strong><small>{hint}</small></span>
+            <span className="control-icon" aria-hidden="true"><Icon /></span>
+            <span className="control-copy">{label}</span>
             <span className="macro-dial">
+              <svg className="dial-ticks" viewBox="0 0 100 100" aria-hidden="true">
+                <path d="M 17.5 82.5 A 46 46 0 1 1 82.5 82.5" pathLength="270" fill="none" strokeDasharray="1.4 8.6" strokeDashoffset="0.7" />
+              </svg>
               <span className="dial-face" aria-hidden="true"><span className="dial-pointer" /></span>
               <input className="dial-input" type="range" min="0" max="100" value={project.macros[key]} disabled={disabled}
                 aria-label={label} onChange={(event) => onMacro(key, Number(event.target.value))} />
             </span>
-            <output>{Math.round(project.macros[key])}<span>%</span></output>
+            <output>{Math.round(project.macros[key])}%</output>
           </label>
         ))}
       </div>
 
       <button className="advanced-toggle" type="button" aria-expanded={advancedOpen}
         aria-controls="advanced-controls" onClick={() => setAdvancedOpen((open) => !open)}>
-        Advanced controls <span aria-hidden="true">{advancedOpen ? '−' : '+'}</span>
+        Advanced controls <ChevronIcon />
       </button>
 
       <div id="advanced-controls" className="advanced-surface" hidden={!advancedOpen}>
         <div className="advanced-heading">
-          <div><p className="section-number">Fine controls</p><h3>Under the surface.</h3></div>
+          <h3>Advanced</h3>
           <button className="icon-button" type="button" onClick={() => setAdvancedOpen(false)}
-            aria-label="Close fine controls">×</button>
+            aria-label="Close fine controls"><CloseIcon /></button>
         </div>
         <div className="advanced-grid">
           {advanced.map(({ key, label, step, suffix }) => {

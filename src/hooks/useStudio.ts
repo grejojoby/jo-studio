@@ -93,7 +93,7 @@ export function useStudio() {
       setProject((current) => addTake(current, {
         ...asset,
         id: crypto.randomUUID(),
-        name: `Take ${current.takes.length + 1} · ${file.name}`,
+        name: `Take ${String(current.takes.length + 1).padStart(2, '0')} · ${file.name}`,
         createdAt: Date.now(),
       }));
       setStatus('Vocal take ready.');
@@ -143,7 +143,7 @@ export function useStudio() {
           ...analysis,
           blob,
           id: crypto.randomUUID(),
-          name: `Take ${current.takes.length + 1}`,
+          name: `Take ${String(current.takes.length + 1).padStart(2, '0')}`,
           createdAt: Date.now(),
         }));
         setStatus('Take saved locally.');

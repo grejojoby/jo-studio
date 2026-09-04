@@ -55,7 +55,7 @@ export class AudioEngine {
     return decoded;
   }
 
-  async analyse(blob: Blob, bucketCount = 96): Promise<AnalysedAudio> {
+  async analyse(blob: Blob, bucketCount = 320): Promise<AnalysedAudio> {
     const buffer = await this.decode(blob);
     return {
       durationSeconds: buffer.duration,

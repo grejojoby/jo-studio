@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { formatDuration } from '../audio/waveform';
 import type { StudioProject, VocalTake } from '../studio-model';
+import { CloseIcon, HeadphonesIcon, MicIcon, PlayIcon, PlusIcon, SpeakerIcon } from './Icons';
 import { Waveform } from './Waveform';
 
 interface TrackWorkspaceProps {
@@ -12,6 +13,7 @@ interface TrackWorkspaceProps {
   onRemoveBacking: () => void;
   onChooseTake: (id: string) => void;
   onRemoveTake: (id: string) => void;
+  onNewTake: () => void;
   onLevel: (track: 'vocalVolume' | 'backingVolume', value: number) => void;
   onMonitoring: (enabled: boolean) => void;
   transport: ReactNode;
@@ -23,103 +25,147 @@ function chosenFile(event: ChangeEvent<HTMLInputElement>, action: (file: File) =
   event.target.value = '';
 }
 
-const idleBackingPeaks = [0.08, 0.18, 0.12, 0.28, 0.2, 0.34, 0.16, 0.24, 0.38, 0.2, 0.3, 0.16,
-  0.26, 0.42, 0.24, 0.32, 0.18, 0.28, 0.14, 0.35, 0.2, 0.3, 0.12, 0.22];
-const idleVocalPeaks = [0.04, 0.08, 0.12, 0.3, 0.62, 0.34, 0.2, 0.44, 0.76, 0.38, 0.18, 0.26,
-  0.58, 0.84, 0.42, 0.2, 0.32, 0.68, 0.36, 0.18, 0.48, 0.72, 0.3, 0.1];
+function noise(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
 
-function EmptyTrack({ active = false }: { active?: boolean }) {
+const idleBackingPeaks = Array.from({ length: 320 }, (_, i) => 0.28 + noise(i) * 0.5 + Math.sin(i / 9) * 0.06);
+const idleVocalPeaks = Array.from({ length: 320 }, (_, i) => {
+  const phrase = Math.max(0, Math.sin(i / 17) * Math.sin(i / 41 + 1.3));
+  return 0.03 + phrase * (0.35 + noise(i + 7) * 0.65);
+});
+
+const METER_SCALE = ['12', '6', '0', '-6', '-12', '-24', '-∞'];
+const METER_SEGMENTS = 24;
+
+function Meter({ level }: { level: number }) {
+  const lit = Math.round(level * (METER_SEGMENTS - 3));
   return (
-    <div className="empty-lane">
-      <Waveform peaks={active ? idleVocalPeaks : idleBackingPeaks} active={active} />
-    </div>
+    <span className="meter-block" aria-hidden="true">
+      <span className="meter-scale">{METER_SCALE.map((mark) => <i key={mark}>{mark}</i>)}</span>
+      <span className="level-meter">
+        {Array.from({ length: METER_SEGMENTS }, (_, index) => (
+          <i key={index} data-lit={index < lit} data-zone={index >= METER_SEGMENTS - 3 ? 'hot' : index >= METER_SEGMENTS - 7 ? 'warm' : 'safe'} />
+        ))}
+      </span>
+    </span>
   );
 }
 
-function Meter() {
-  return <span className="level-meter" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></span>;
+function Fader({ label, value, disabled, onChange }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void }) {
+  return (
+    <span className="fader-rail">
+      <input className="vertical-fader" aria-label={label} type="range" min="0" max="1" step="0.01" value={value}
+        disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+    </span>
+  );
 }
 
-export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onVocal,
-  onRemoveBacking, onChooseTake, onRemoveTake, onLevel, onMonitoring, transport }: TrackWorkspaceProps) {
+export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onVocal, onRemoveBacking,
+  onChooseTake, onRemoveTake, onNewTake, onLevel, onMonitoring, transport }: TrackWorkspaceProps) {
+  const takeLabel = (take: VocalTake) => take.name.split(' · ')[0];
+
   return (
     <section className="track-workspace" aria-labelledby="tracks-heading">
       <h2 className="visually-hidden" id="tracks-heading">Session tracks</h2>
-      <div className="waveform-stage">
-        <article className="waveform-channel backing-lane">
-          <header className="channel-header">
-            <div className="channel-identity"><span className="track-icon backing-icon" aria-hidden="true">♫</span><div><h3>Backing</h3><p>{project.backing?.name ?? 'Karaoke or accompaniment'}</p></div></div>
-            <div className="channel-actions">
-              <span className="channel-duration">{project.backing ? formatDuration(project.backing.durationSeconds) : '00:00'}</span>
-            <input className="visually-hidden" id="backing-file" type="file" accept="audio/*"
-              disabled={disabled} aria-label="Add backing track"
-              onChange={(event) => chosenFile(event, onBacking)} />
-              <label className="text-button" aria-disabled={disabled} htmlFor="backing-file">
-                {project.backing ? 'Replace' : '+ Add track'}
-            </label>
-            {project.backing && <button className="icon-button" type="button" disabled={disabled}
-              aria-label="Remove backing track" onClick={onRemoveBacking}>×</button>}
-          </div>
-          </header>
-          <div className="channel-waveform">{project.backing ? <Waveform peaks={project.backing.peaks} /> : <EmptyTrack />}</div>
-        </article>
 
-        <article className="waveform-channel vocal-lane">
-          <header className="channel-header">
-            <div className="channel-identity"><span className="track-icon vocal-icon" aria-hidden="true">●</span><div><h3>Lead vocal</h3><p>{selectedTake?.name ?? 'Live take or dry import'}</p></div></div>
-            <div className="channel-actions">
-              <span className="channel-duration">{selectedTake ? formatDuration(selectedTake.durationSeconds) : '00:00'}</span>
-            <input className="visually-hidden" id="vocal-file" type="file" accept="audio/*"
-              disabled={disabled} aria-label="Import vocal"
-              onChange={(event) => chosenFile(event, onVocal)} />
-              <label className="text-button" aria-disabled={disabled} htmlFor="vocal-file">Import</label>
-          </div>
-          </header>
-          <div className="channel-waveform">{selectedTake ? <Waveform peaks={selectedTake.peaks} active /> : <EmptyTrack active />}</div>
-        </article>
-        <span className="playhead" aria-hidden="true"><i /></span>
-      </div>
+      <div className="console-card">
+        <div className="waveform-stage">
+          <article className="waveform-channel backing-lane">
+            <header className="channel-header">
+              <div className="channel-identity"><h3>Backing</h3>{project.backing && <p>{project.backing.name}</p>}</div>
+              <div className="channel-actions">
+                <input className="visually-hidden" id="backing-file" type="file" accept="audio/*"
+                  disabled={disabled} aria-label="Add backing track" onChange={(event) => chosenFile(event, onBacking)} />
+                <label className="text-button" aria-disabled={disabled} htmlFor="backing-file">
+                  {project.backing ? 'Replace' : 'Add track'}
+                </label>
+                {project.backing && <button className="icon-button" type="button" disabled={disabled}
+                  aria-label="Remove backing track" onClick={onRemoveBacking}><CloseIcon /></button>}
+                <span className="channel-duration">{project.backing ? formatDuration(project.backing.durationSeconds) : '--:--'}</span>
+              </div>
+            </header>
+            <div className="channel-waveform">
+              {project.backing ? <Waveform peaks={project.backing.peaks} /> : <Waveform peaks={idleBackingPeaks} />}
+            </div>
+          </article>
 
-      <div className="mixer-stage">
-        <label className="channel-strip backing-strip">
-          <span className="strip-label">Backing</span>
-          <span className="strip-controls"><Meter /><input className="vertical-fader" aria-label="Backing level" type="range" min="0" max="1" step="0.01" value={project.backingVolume}
-            disabled={disabled} onChange={(event) => onLevel('backingVolume', Number(event.target.value))} /></span>
-          <output>{Math.round(project.backingVolume * 100)}%</output>
-        </label>
-        {transport}
-        <div className="vocal-strip-wrap">
-          <label className="channel-strip vocal-strip">
+          <article className="waveform-channel vocal-lane">
+            <header className="channel-header">
+              <div className="channel-identity"><h3>Lead vocal</h3>{selectedTake && <p>{selectedTake.name}</p>}</div>
+              <div className="channel-actions">
+                <input className="visually-hidden" id="vocal-file" type="file" accept="audio/*"
+                  disabled={disabled} aria-label="Import vocal" onChange={(event) => chosenFile(event, onVocal)} />
+                <label className="text-button" aria-disabled={disabled} htmlFor="vocal-file">Import</label>
+                <span className="channel-duration">{selectedTake ? formatDuration(selectedTake.durationSeconds) : '--:--'}</span>
+              </div>
+            </header>
+            <div className="channel-waveform">
+              <span className="lane-icon" aria-hidden="true"><MicIcon /></span>
+              {selectedTake ? <Waveform peaks={selectedTake.peaks} active /> : <Waveform peaks={idleVocalPeaks} active />}
+            </div>
+          </article>
+          <span className="playhead" aria-hidden="true" />
+        </div>
+
+        <div className="mixer-stage">
+          <div className="channel-strip backing-strip">
+            <span className="strip-label">Backing</span>
+            <div className="strip-controls">
+              <Meter level={project.backingVolume} />
+              <Fader label="Backing level" value={project.backingVolume} disabled={disabled}
+                onChange={(value) => onLevel('backingVolume', value)} />
+            </div>
+            <output className="strip-readout" aria-label="Backing level"><SpeakerIcon /><span>{Math.round(project.backingVolume * 100)}</span></output>
+          </div>
+
+          {transport}
+
+          <div className="channel-strip vocal-strip">
             <span className="strip-label">Lead vocal</span>
-            <span className="strip-controls"><Meter /><input className="vertical-fader" aria-label="Vocal level" type="range" min="0" max="1" step="0.01" value={project.vocalVolume}
-              disabled={disabled} onChange={(event) => onLevel('vocalVolume', Number(event.target.value))} /></span>
-            <output>{Math.round(project.vocalVolume * 100)}%</output>
-          </label>
-          <label className="monitor-toggle">
-            <input type="checkbox" checked={project.monitorEnabled} disabled={disabled}
-              onChange={(event) => onMonitoring(event.target.checked)} />
-            Live effects <small>Headphones</small>
-          </label>
+            <div className="strip-controls">
+              <Meter level={project.vocalVolume} />
+              <Fader label="Vocal level" value={project.vocalVolume} disabled={disabled}
+                onChange={(value) => onLevel('vocalVolume', value)} />
+            </div>
+            <label className="monitor-toggle" data-on={project.monitorEnabled} title="Live effects in headphones">
+              <input className="visually-hidden" type="checkbox" checked={project.monitorEnabled} disabled={disabled}
+                onChange={(event) => onMonitoring(event.target.checked)} />
+              <HeadphonesIcon />
+              <span className="visually-hidden">Live effects in headphones</span>
+            </label>
+          </div>
         </div>
       </div>
 
       <div className="takes-deck">
-        <div className="takes-heading"><h3>Takes</h3><span>{project.takes.length} saved locally</span></div>
-        {project.takes.length === 0 ? <div className="new-take-card"><span>+</span><strong>New take</strong><small>Press record to begin</small></div> : (
-          <ol className="take-list">
-            {project.takes.map((take) => (
-              <li key={take.id} data-selected={take.id === project.selectedTakeId}>
+        <h3 className="takes-heading">Takes</h3>
+        <ol className="take-list">
+          {project.takes.map((take) => {
+            const selected = take.id === project.selectedTakeId;
+            return (
+              <li key={take.id} data-selected={selected}>
                 <button className="take-choice" type="button" disabled={disabled}
-                  aria-pressed={take.id === project.selectedTakeId} onClick={() => onChooseTake(take.id)}>
-                  <span className="take-meta"><strong>{take.name}</strong><small>{formatDuration(take.durationSeconds)}</small></span>
-                  <Waveform peaks={take.peaks} active={take.id === project.selectedTakeId} />
+                  aria-pressed={selected} onClick={() => onChooseTake(take.id)}>
+                  <span className="take-meta">
+                    <span className="take-play" aria-hidden="true">{selected && <PlayIcon />}</span>
+                    <strong title={take.name}>{takeLabel(take)}</strong>
+                    <small>{formatDuration(take.durationSeconds)}</small>
+                  </span>
+                  <Waveform peaks={take.peaks} active={selected} bars={140} />
                 </button>
-                <button className="icon-button" type="button" disabled={disabled}
-                  aria-label={`Delete ${take.name}`} onClick={() => onRemoveTake(take.id)}>×</button>
+                <button className="icon-button take-remove" type="button" disabled={disabled}
+                  aria-label={`Delete ${take.name}`} onClick={() => onRemoveTake(take.id)}><CloseIcon /></button>
               </li>
-            ))}
-          </ol>
-        )}
+            );
+          })}
+          <li className="new-take">
+            <button className="new-take-card" type="button" disabled={disabled} onClick={onNewTake}>
+              <PlusIcon /><span>New take</span>
+            </button>
+          </li>
+        </ol>
       </div>
     </section>
   );

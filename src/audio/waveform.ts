@@ -21,5 +21,5 @@ export function extractPeaks(samples: Float32Array, bucketCount: number): number
 export function formatDuration(seconds: number): string {
   const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
   const minutes = Math.floor(safeSeconds / 60);
-  return `${minutes}:${String(safeSeconds % 60).padStart(2, '0')}`;
+  return `${String(minutes).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
 }

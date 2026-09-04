@@ -15,8 +15,8 @@ describe('extractPeaks', () => {
 
 describe('formatDuration', () => {
   it('formats finite non-negative durations as minutes and seconds', () => {
-    expect(formatDuration(65.8)).toBe('1:05');
-    expect(formatDuration(Number.NaN)).toBe('0:00');
-    expect(formatDuration(-5)).toBe('0:00');
+    expect(formatDuration(65.8)).toBe('01:05');
+    expect(formatDuration(Number.NaN)).toBe('00:00');
+    expect(formatDuration(-5)).toBe('00:00');
   });
 });

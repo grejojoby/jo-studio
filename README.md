@@ -29,7 +29,7 @@ npm run build
 ## Studio workflow
 
 1. Optionally add a karaoke or backing track.
-2. Import a dry vocal or select **Record a take**. The backing starts with the recording.
+2. Import a dry vocal, press the record dial, or choose **New take**. The backing starts with the recording.
 3. Record several full takes and select the strongest one.
 4. Pick a neutral, male, or female preset. Adjust the five simple controls; open **Advanced controls** only when needed.
 5. Balance vocal and backing levels, preview, and export the mix or processed vocal as WAV/MP3.
@@ -43,6 +43,10 @@ Recordings, settings, and backing audio are kept in IndexedDB under the `localho
 - The recorded take is always the original microphone stream. Effects are applied only for monitoring, preview, and export.
 - Browsers do not natively encode MP3 through WebCodecs, so MP3 is produced locally with `@breezystack/lamejs`. WAV is the lossless choice.
 - Maximum imported file size is 250 MB. Supported decode formats depend on the browser and operating system.
+
+## Design reference
+
+The studio layout follows the console render in `docs/design-reference.png`: waveform stage, mixer with meters and faders, transport, takes shelf, and the five-dial sound rack.
 
 ## Architecture and primary references
 

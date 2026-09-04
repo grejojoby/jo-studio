@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ExportFormat, ExportTarget } from '../hooks/useStudio';
+import { UploadIcon } from './Icons';
 
 interface ExportPanelProps {
   disabled: boolean;
@@ -22,7 +23,7 @@ export function ExportPanel({ disabled, exporting, hasBacking, onExport }: Expor
       <button className="export-trigger" type="button" disabled={disabled || exporting}
         aria-expanded={open} aria-controls="export-options" aria-label="Export audio"
         onClick={() => setOpen((visible) => !visible)}>
-        {exporting ? 'Rendering…' : 'Export'} <span aria-hidden="true">↗</span>
+        <UploadIcon />{exporting ? 'Rendering…' : 'Export'}
       </button>
       {open && <div className="export-options" id="export-options" role="group" aria-label="Export options">
         <div className="export-popover-heading"><strong>Export master</strong><span>Rendered on this device</span></div>
