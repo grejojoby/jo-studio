@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { microphoneConstraints, pickRecorderMimeType, stopMediaStream } from './microphone-recorder';
 
 describe('microphone recording safeguards', () => {
-  it('requests an unprocessed vocal signal without camera access', () => {
+  it('requests noise-suppressed vocal capture without gain or echo processing', () => {
     expect(microphoneConstraints).toEqual({
       audio: {
         autoGainControl: false,
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: true,
         channelCount: 1,
       },
       video: false,

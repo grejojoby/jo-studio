@@ -8,11 +8,13 @@ const RECORDER_TYPES = [
   'audio/mp4',
 ] as const;
 
+// Browser noise suppression removes stationary room noise (fans, hum) at capture.
+// Auto gain and echo cancellation stay off so vocal dynamics are untouched.
 export const microphoneConstraints: MediaStreamConstraints = {
   audio: {
     autoGainControl: false,
     echoCancellation: false,
-    noiseSuppression: false,
+    noiseSuppression: true,
     channelCount: 1,
   },
   video: false,
