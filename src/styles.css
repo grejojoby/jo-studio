@@ -165,7 +165,9 @@ select { width: 100%; min-height: 2.4rem; margin-top: .4rem; padding: 0 .6rem; c
 .dial-face { position: relative; display: block; width: 66%; height: 66%; border: 2px solid #e8703a; border-radius: 50%; background: radial-gradient(circle at 50% 30%,#3a322e,#1d1917 62%,#151211); box-shadow: 0 0 0 .3rem #141110, 0 .5rem 1.1rem rgba(0,0,0,.6), 0 0 .9rem rgba(232,112,58,.28), inset 0 .2rem .35rem rgba(255,255,255,.08), inset 0 -.55rem .9rem rgba(0,0,0,.6); }
 .dial-pointer { position: absolute; inset: .28rem; transform: rotate(calc(-135deg + var(--dial-value) * 2.7deg)); }
 .dial-pointer::after { position: absolute; top: 0; left: 50%; width: .14rem; height: 30%; border-radius: 1rem; background: #f4efe9; box-shadow: 0 0 .3rem rgba(255,255,255,.4); content: ""; transform: translateX(-50%); }
-.dial-input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.dial-input, .dial-input:disabled { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+.dial-input:disabled { cursor: not-allowed; }
+.macro-control:has(.dial-input:disabled) { opacity: .38; }
 .macro-control:focus-within { border-color: var(--ember); box-shadow: 0 0 0 2px rgba(240,138,77,.18); }
 .advanced-toggle { display: flex; align-items: center; gap: .35rem; width: max-content; min-height: 2.2rem; padding: 0 .2rem; color: var(--muted-light); font-size: 1.05rem; font-weight: 400; }
 .advanced-toggle svg { font-size: 1.1rem; color: var(--muted); }

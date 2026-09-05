@@ -144,7 +144,7 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
       <div className="takes-deck">
         <h3 className="takes-heading">Takes</h3>
         <ol className="take-list">
-          {project.takes.map((take) => {
+          {[...project.takes].sort((a, b) => b.createdAt - a.createdAt).map((take) => {
             const selected = take.id === project.selectedTakeId;
             return (
               <li key={take.id} data-selected={selected}>
