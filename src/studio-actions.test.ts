@@ -26,6 +26,14 @@ describe('studio project actions', () => {
     expect(project.effects.delayFeedback).toBe(0.3);
   });
 
+  it('preserves unrelated advanced edits when changing a simple control', () => {
+    const fineTuned = changeEffect(changeEffect(createDefaultProject(), 'highPassHz', 120), 'reverbSeconds', 1.8);
+    const changed = changeMacro(fineTuned, 'warmth', 80);
+    expect(changed.effects.highPassHz).toBe(120);
+    expect(changed.effects.reverbSeconds).toBe(1.8);
+    expect(changed.effects.warmthDb).toBeGreaterThan(fineTuned.effects.warmthDb);
+  });
+
   it('selects a newly added vocal take', () => {
     const take = {
       id: 'take-1', name: 'Take 1', blob: new Blob(), durationSeconds: 5,

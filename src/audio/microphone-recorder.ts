@@ -55,6 +55,14 @@ export class MicrophoneRecorder {
     return this.recorder?.state === 'recording';
   }
 
+  dispose(): void {
+    if (this.recorder && this.recorder.state !== 'inactive') this.recorder.stop();
+    if (this.stream) stopMediaStream(this.stream);
+    this.recorder = undefined;
+    this.stream = undefined;
+    this.chunks = [];
+  }
+
   async start(): Promise<MediaStream> {
     if (this.isRecording) throw new Error('A recording is already in progress');
 

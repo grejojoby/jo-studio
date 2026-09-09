@@ -16,7 +16,7 @@ export interface LiveLevels {
 }
 
 const METER_FLOOR_DB = -48;
-const METER_CEILING_DB = 6;
+const METER_CEILING_DB = 0;
 
 export function meterLevel(samples: Float32Array): number {
   let sum = 0;
@@ -52,6 +52,8 @@ export class AudioEngine {
   private playbackChain?: EffectChain;
   private monitorChain?: EffectChain;
   private monitorSource?: MediaStreamAudioSourceNode;
+  private monitorGain?: GainNode;
+  private readonly meterSamples = new WeakMap<AnalyserNode, Float32Array<ArrayBuffer>>();
   private inputSource?: MediaStreamAudioSourceNode;
   private inputAnalyser?: AnalyserNode;
   private vocalAnalyser?: AnalyserNode;
@@ -150,15 +152,25 @@ export class AudioEngine {
     };
   }
 
+  get inputPeak(): number {
+    if (!this.inputAnalyser) return 0;
+    const samples = this.meterSamples.get(this.inputAnalyser)!;
+    this.inputAnalyser.getFloatTimeDomainData(samples);
+    let peak = 0;
+    for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+    return Math.min(1, peak);
+  }
+
   private createAnalyser(context: AudioContext): AnalyserNode {
     const analyser = context.createAnalyser();
     analyser.fftSize = 1024;
+    this.meterSamples.set(analyser, new Float32Array(analyser.fftSize));
     return analyser;
   }
 
   private readLevel(analyser?: AnalyserNode): number {
     if (!analyser) return 0;
-    const samples = new Float32Array(analyser.fftSize);
+    const samples = this.meterSamples.get(analyser)!;
     analyser.getFloatTimeDomainData(samples);
     return meterLevel(samples);
   }
@@ -168,17 +180,20 @@ export class AudioEngine {
     const context = await this.getContext();
     const source = context.createMediaStreamSource(stream);
     const gain = context.createGain();
-    const chain = createEffectChain(context, settings);
+    const chain = createEffectChain(context, settings, { monitoring: true });
     gain.gain.value = clampMixLevel(volume);
     source.connect(gain).connect(chain.input);
     chain.output.connect(context.destination);
     this.monitorSource = source;
+    this.monitorGain = gain;
     this.monitorChain = chain;
   }
 
   setMixLevels(vocalVolume: number, backingVolume: number): void {
-    if (this.vocalGain) this.vocalGain.gain.value = clampMixLevel(vocalVolume);
-    if (this.backingGain) this.backingGain.gain.value = clampMixLevel(backingVolume);
+    const now = this.context?.currentTime ?? 0;
+    this.vocalGain?.gain.setTargetAtTime(clampMixLevel(vocalVolume), now, 0.01);
+    this.monitorGain?.gain.setTargetAtTime(clampMixLevel(vocalVolume), now, 0.01);
+    this.backingGain?.gain.setTargetAtTime(clampMixLevel(backingVolume), now, 0.01);
   }
 
   setEffects(settings: EffectSettings): void {
@@ -203,6 +218,8 @@ export class AudioEngine {
     this.playbackSources = [];
     this.playbackChain?.dispose();
     this.playbackChain = undefined;
+    this.vocalGain?.disconnect();
+    this.backingGain?.disconnect();
     this.vocalGain = undefined;
     this.backingGain = undefined;
     this.vocalAnalyser = undefined;
@@ -213,6 +230,8 @@ export class AudioEngine {
   stopMonitor(): void {
     this.monitorSource?.disconnect();
     this.monitorSource = undefined;
+    this.monitorGain?.disconnect();
+    this.monitorGain = undefined;
     this.monitorChain?.dispose();
     this.monitorChain = undefined;
   }

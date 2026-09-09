@@ -8,7 +8,7 @@ A private, browser-local vocal studio for restrained vocal polish. Record severa
 docker compose up --build
 ```
 
-Open [http://localhost:8080](http://localhost:8080). Use headphones before enabling effect monitoring. Stop the app with `docker compose down`.
+Open [http://localhost:8080](http://localhost:8080). **Hear myself** starts off for speakers. Enable it only with headphones. Stop the app with `docker compose down`.
 
 ### Prebuilt image
 
@@ -37,9 +37,9 @@ npm run build
 ## Studio workflow
 
 1. Optionally add a karaoke or backing track.
-2. Import a dry vocal, press the record dial, or choose **New take**. The backing starts with the recording.
+2. Import a dry vocal, press **Record a take**, or choose **New take**. The backing starts with the recording.
 3. Record several full takes and select the strongest one.
-4. Pick a neutral, male, or female preset. Adjust the five simple controls; open **Advanced controls** only when needed.
+4. Pick a vocal preset. Adjust Clarity, Warmth, Smoothness, Room, and Echo with visible sliders. **Advanced controls** groups fine adjustments by tone, smoothness, and space; enable **Show exact values** for engineering units.
 5. Balance vocal and backing levels, preview, and export the mix or processed vocal as WAV/MP3.
 
 Recordings, settings, and backing audio are kept in IndexedDB under the `localhost:8080` browser origin. **Clear session** deletes that local session after confirmation. Removing the container does not clear browser storage.
@@ -48,13 +48,13 @@ Recordings, settings, and backing audio are kept in IndexedDB under the `localho
 
 - Version 1 targets current desktop Chrome and Edge. `localhost` is treated as a secure context for microphone access.
 - Browser/hardware latency varies. Hushline uses the interactive Web Audio latency hint and native audio nodes, but a wired audio interface or wired headphones gives the most predictable monitoring.
-- The recorded take is always the original microphone stream. Effects are applied only for monitoring, preview, and export.
+- The recorded take is always the original microphone stream. Live monitoring applies tone, room, echo, and peak protection; playback and export also apply the full vocal compressor. Monitoring starts off on every session restore.
 - Browsers do not natively encode MP3 through WebCodecs, so MP3 is produced locally with `@breezystack/lamejs`. WAV is the lossless choice.
 - Maximum imported file size is 250 MB. Supported decode formats depend on the browser and operating system.
 
 ## Design reference
 
-The studio layout follows the console render in `docs/design-reference.png`: waveform stage, mixer with meters and faders, transport, takes shelf, and the five-dial sound rack.
+The studio uses a warm, restrained console with real waveforms, a labelled transport, readable level sliders, and a separate sound panel. Empty tracks explain how to add audio. During recording, the vocal lane shows the last eight seconds of sampled microphone levels. Playback uses a moving playhead and a shared timeline. See `PRODUCT.md` and `SPEC-studio-interface.md` for the current direction.
 
 ## Architecture and primary references
 

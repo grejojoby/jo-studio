@@ -18,7 +18,15 @@ export function changeMacro(
   value: number,
 ): StudioProject {
   const macros = { ...project.macros, [name]: Math.min(100, Math.max(0, value)) };
-  return updated(project, { macros, effects: resolveEffects(project.presetId, macros) });
+  const resolved = resolveEffects(project.presetId, macros);
+  const affected: Record<keyof MacroSettings, Array<keyof EffectSettings>> = {
+    clarity: ['presenceDb'], warmth: ['warmthDb'],
+    smoothness: ['compressorThresholdDb', 'compressorRatio', 'deEsserDb'],
+    reverb: ['reverbSeconds', 'reverbMix'], delay: ['delayFeedback', 'delayMix'],
+  };
+  const effects = { ...project.effects };
+  for (const key of affected[name]) effects[key] = resolved[key];
+  return updated(project, { macros, effects });
 }
 
 export function changeEffect(

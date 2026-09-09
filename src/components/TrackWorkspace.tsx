@@ -19,6 +19,10 @@ interface TrackWorkspaceProps {
   onLevel: (track: 'vocalVolume' | 'backingVolume', value: number) => void;
   onMonitoring: (enabled: boolean) => void;
   transport: ReactNode;
+  recording: boolean;
+  playing: boolean;
+  positionSeconds: number;
+  livePeaks: number[];
 }
 
 function chosenFile(event: ChangeEvent<HTMLInputElement>, action: (file: File) => void) {
@@ -27,25 +31,12 @@ function chosenFile(event: ChangeEvent<HTMLInputElement>, action: (file: File) =
   event.target.value = '';
 }
 
-function noise(seed: number): number {
-  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
-
-const idleBackingPeaks = Array.from({ length: 320 }, (_, i) => 0.28 + noise(i) * 0.5 + Math.sin(i / 9) * 0.06);
-const idleVocalPeaks = Array.from({ length: 320 }, (_, i) => {
-  const phrase = Math.max(0, Math.sin(i / 17) * Math.sin(i / 41 + 1.3));
-  return 0.03 + phrase * (0.35 + noise(i + 7) * 0.65);
-});
-
-const METER_SCALE = ['12', '6', '0', '-6', '-12', '-24', '-∞'];
 const METER_SEGMENTS = 24;
 
 function Meter({ level }: { level: number }) {
-  const lit = Math.round(level * (METER_SEGMENTS - 3));
+  const lit = Math.round(level * METER_SEGMENTS);
   return (
     <span className="meter-block" aria-hidden="true">
-      <span className="meter-scale">{METER_SCALE.map((mark) => <i key={mark}>{mark}</i>)}</span>
       <span className="level-meter">
         {Array.from({ length: METER_SEGMENTS }, (_, index) => (
           <i key={index} data-lit={index < lit} data-zone={index >= METER_SEGMENTS - 3 ? 'hot' : index >= METER_SEGMENTS - 7 ? 'warm' : 'safe'} />
@@ -59,14 +50,18 @@ function Fader({ label, value, disabled, onChange }: { label: string; value: num
   return (
     <span className="fader-rail">
       <input className="vertical-fader" aria-label={label} type="range" min="0" max="1" step="0.01" value={value}
-        disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+        disabled={disabled} aria-valuetext={`${Math.round(value * 100)}%`}
+        onChange={(event) => onChange(Number(event.target.value))} />
     </span>
   );
 }
 
 export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onVocal, onRemoveBacking,
-  onChooseTake, onRemoveTake, onNewTake, levels, onLevel, onMonitoring, transport }: TrackWorkspaceProps) {
+  onChooseTake, onRemoveTake, onNewTake, levels, onLevel, onMonitoring, transport,
+  recording, playing, positionSeconds, livePeaks }: TrackWorkspaceProps) {
   const takeLabel = (take: VocalTake) => take.name.split(' · ')[0];
+  const duration = Math.max(project.backing?.durationSeconds ?? 0, selectedTake?.durationSeconds ?? 0, 1);
+  const progress = Math.min(100, positionSeconds / duration * 100);
 
   return (
     <section className="track-workspace" aria-labelledby="tracks-heading">
@@ -89,26 +84,30 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
               </div>
             </header>
             <div className="channel-waveform">
-              {project.backing ? <Waveform peaks={project.backing.peaks} /> : <Waveform peaks={idleBackingPeaks} />}
+              {project.backing ? <div className="audio-region" style={{ width: `${project.backing.durationSeconds / duration * 100}%` }}><Waveform peaks={project.backing.peaks} /></div>
+                : <div className="empty-track"><SpeakerIcon /><div><strong>Add your backing track</strong><p>Optional. You can record just your voice.</p></div></div>}
+              {(playing || recording) && project.backing && <span className="playhead" style={{ left: `${progress}%` }} aria-hidden="true" />}
             </div>
           </article>
 
           <article className="waveform-channel vocal-lane">
             <header className="channel-header">
-              <div className="channel-identity"><h3>Lead vocal</h3>{selectedTake && <p>{selectedTake.name}</p>}</div>
+              <div className="channel-identity"><h3>{recording ? 'Recording vocal' : 'Your voice'}</h3>{!recording && selectedTake && <p>{selectedTake.name}</p>}</div>
               <div className="channel-actions">
                 <input className="visually-hidden" id="vocal-file" type="file" accept="audio/*"
                   disabled={disabled} aria-label="Import vocal" onChange={(event) => chosenFile(event, onVocal)} />
                 <label className="text-button" aria-disabled={disabled} htmlFor="vocal-file">Import</label>
-                <span className="channel-duration">{selectedTake ? formatDuration(selectedTake.durationSeconds) : '--:--'}</span>
+                <span className="channel-duration">{recording ? formatDuration(positionSeconds) : selectedTake ? formatDuration(selectedTake.durationSeconds) : '--:--'}</span>
               </div>
             </header>
             <div className="channel-waveform">
-              <span className="lane-icon" aria-hidden="true"><MicIcon /></span>
-              {selectedTake ? <Waveform peaks={selectedTake.peaks} active /> : <Waveform peaks={idleVocalPeaks} active />}
+              {recording ? <div className="live-input"><span>Live input · last 8 seconds</span><Waveform peaks={livePeaks} active bars={160} /></div>
+                : selectedTake ? <div className="audio-region" style={{ width: `${selectedTake.durationSeconds / duration * 100}%` }}><Waveform peaks={selectedTake.peaks} active /></div>
+                  : <div className="empty-track"><MicIcon /><div><strong>Ready for your first take</strong><p>Press Record, or import a vocal.</p></div></div>}
+              {playing && selectedTake && <span className="playhead" style={{ left: `${progress}%` }} aria-hidden="true" />}
             </div>
           </article>
-          <span className="playhead" aria-hidden="true" />
+          <div className="timeline-ruler" aria-hidden="true"><span>00:00</span><span>{duration > 1 ? formatDuration(duration / 2) : ''}</span><span>{project.backing || selectedTake ? formatDuration(duration) : 'No audio yet'}</span></div>
         </div>
 
         <div className="mixer-stage">
@@ -119,30 +118,35 @@ export function TrackWorkspace({ project, selectedTake, disabled, onBacking, onV
               <Fader label="Backing level" value={project.backingVolume} disabled={disabled}
                 onChange={(value) => onLevel('backingVolume', value)} />
             </div>
-            <output className="strip-readout" aria-label="Backing level"><SpeakerIcon /><span>{Math.round(project.backingVolume * 100)}</span></output>
+            <output className="strip-readout" aria-label="Backing level"><span>{Math.round(project.backingVolume * 100)}%</span></output>
           </div>
 
           {transport}
 
           <div className="channel-strip vocal-strip">
-            <span className="strip-label">Lead vocal</span>
+            <span className="strip-label">Your voice</span>
             <div className="strip-controls">
               <Meter level={levels.vocal} />
               <Fader label="Vocal level" value={project.vocalVolume} disabled={disabled}
                 onChange={(value) => onLevel('vocalVolume', value)} />
             </div>
-            <label className="monitor-toggle" data-on={project.monitorEnabled} title="Live effects in headphones">
-              <input className="visually-hidden" type="checkbox" checked={project.monitorEnabled} disabled={disabled}
-                onChange={(event) => onMonitoring(event.target.checked)} />
-              <HeadphonesIcon />
-              <span className="visually-hidden">Live effects in headphones</span>
-            </label>
+            <output className="strip-readout" aria-label="Vocal level">{Math.round(project.vocalVolume * 100)}%</output>
           </div>
         </div>
       </div>
 
+      <div className="monitor-settings">
+        <label className="monitor-toggle" data-on={project.monitorEnabled}>
+          <input type="checkbox" checked={project.monitorEnabled} disabled={disabled}
+            aria-describedby="monitor-help" onChange={(event) => onMonitoring(event.target.checked)} />
+          <HeadphonesIcon /><span>Hear myself</span>
+        </label>
+        <p id="monitor-help">{project.monitorEnabled ? 'Use wired headphones. Live tone & space; full polish on playback.' : 'Off for speakers. Use headphones to hear your voice as you record.'}</p>
+      </div>
+
       <div className="takes-deck">
         <h3 className="takes-heading">Takes</h3>
+        {project.takes.length === 0 && <p className="takes-empty">Your recordings will appear here. Keep a few and choose your favourite.</p>}
         <ol className="take-list">
           {[...project.takes].sort((a, b) => b.createdAt - a.createdAt).map((take) => {
             const selected = take.id === project.selectedTakeId;

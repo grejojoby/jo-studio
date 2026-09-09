@@ -39,7 +39,7 @@ export function createDefaultProject(): StudioProject {
     effects: resolveEffects(DEFAULT_PRESET_ID, macros),
     vocalVolume: 0.88,
     backingVolume: 0.72,
-    monitorEnabled: true,
+    monitorEnabled: false,
     updatedAt: Date.now(),
   };
 }

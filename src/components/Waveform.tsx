@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 interface WaveformProps {
   peaks: number[];
   active?: boolean;
@@ -14,12 +16,11 @@ function densify(peaks: number[], bars: number): number[] {
     const right = Math.min(peaks.length - 1, left + 1);
     const mix = position - left;
     const base = peaks[left] * (1 - mix) + peaks[right] * mix;
-    const texture = 0.72 + 0.28 * Math.abs(Math.sin(index * 12.9898 + left * 78.233));
-    return base * texture;
+    return base;
   });
 }
 
-export function Waveform({ peaks, active = false, bars = 440 }: WaveformProps) {
+export const Waveform = memo(function Waveform({ peaks, active = false, bars = 440 }: WaveformProps) {
   const width = 1000;
   const height = 100;
   const data = densify(peaks, bars);
@@ -35,4 +36,4 @@ export function Waveform({ peaks, active = false, bars = 440 }: WaveformProps) {
       })}
     </svg>
   );
-}
+});

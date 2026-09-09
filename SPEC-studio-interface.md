@@ -2,17 +2,20 @@
 
 ## Objective
 
-Offer a calm, self-explanatory studio that feels like a purpose-built recording console rather than a software dashboard.
+Offer a professional, simple studio for recording and polishing vocals, with controls that behave as they look and values that explain the audible result.
 
 ## Acceptance Criteria
 
-- The primary path—add backing, record/import vocal, choose take, adjust, preview, export—is visible in one desktop viewport without document scrolling at 1024×700 and above.
-- The shell is organized as a compact top session bar, an asymmetric tracks-and-sound console, and a dedicated bottom transport deck.
-- Five large plain-language macro dials and preset choices are the default control surface. Each dial remains a native range input for keyboard and assistive-technology access.
-- Technical controls live in a collapsed Advanced surface that overlays the sound panel instead of increasing page height.
-- All controls have visible labels, keyboard access, focus indicators, and status/error announcements.
-- Layout remains usable at 320, 768, 1024, and 1440 CSS pixels; recording is marked desktop-only.
+- The primary path (add backing, record/import vocal, choose take, adjust, preview, export) remains available in one desktop viewport at 1024×700 and above.
+- Five visible native sliders replace decorative knobs. Each has a label, audible-purpose description, percentage, keyboard access, and visible focus.
+- Advanced controls occupy the sound panel, with full-width rows grouped into Tone, Smoothness, and Room & echo. The panel scrolls independently and has a persistent return control. Escape returns focus to the toggle.
+- Advanced values use descriptions and readable percentages by default. Exact units are available on request. Changing a simple effect preserves unrelated advanced adjustments.
+- Empty tracks contain instructions, never invented waveforms. Imported/recorded audio uses measured peaks. Recording shows a rolling eight-second input-level history; playback shows actual transport position on a shared track scale.
+- Record, stop, play, and level controls have visible labels. Starting/finishing operations prevent duplicate actions. A late microphone grant is released after the studio unmounts.
+- Hear myself is explicit, labelled for headphones, and off at startup, including restored sessions. Live monitoring skips the extra vocal compressor while retaining peak protection; playback and export use the full effects chain.
+- Unrelated effect adjustments preserve the active reverb buffer. Track-level changes use short gain ramps.
+- Layout remains readable at 320, 768, 1024, and 1440 CSS pixels, with structural stacking below desktop sizes. Desktop Chrome and Edge remain the recording target.
 
 ## Visual Direction
 
-Cinematic broadcast minimalism: a near-black shell, warm auburn waveform stage, graphite sound rack, ember signal accents, refined grotesk type, and restrained illuminated depth. The reference mood is professional recording software, but the product stays purpose-built for one vocal, one backing track, and five understandable sound controls.
+A singer working at a desktop needs a calm, low-glare workspace while concentrating on a take. Retain Hushline's warm dark palette, with clearer text, restrained amber sound accents, a distinct red record button, flat controls, and minimal decoration.

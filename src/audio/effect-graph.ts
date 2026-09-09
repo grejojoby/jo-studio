@@ -38,13 +38,16 @@ function createImpulseBuffer(context: BaseAudioContext, durationSeconds: number)
 export function createEffectChain(
   context: BaseAudioContext,
   settings: EffectSettings,
+  options: { monitoring?: boolean } = {},
 ): EffectChain {
   const input = context.createGain();
   const highPass = context.createBiquadFilter();
   const warmth = context.createBiquadFilter();
   const presence = context.createBiquadFilter();
   const deEsser = context.createBiquadFilter();
-  const compressor = context.createDynamicsCompressor();
+  // Browser compressors use look-ahead. Keep the limiter, but skip the extra
+  // compressor in live monitoring; the recorded take receives full processing.
+  const compressor = options.monitoring ? undefined : context.createDynamicsCompressor();
   const dry = context.createGain();
   const convolver = context.createConvolver();
   const reverbWet = context.createGain();
@@ -64,40 +67,48 @@ export function createEffectChain(
   presence.Q.value = 0.8;
   deEsser.type = 'highshelf';
   deEsser.frequency.value = 6_400;
-  compressor.knee.value = 12;
-  compressor.attack.value = 0.012;
-  compressor.release.value = 0.18;
+  if (compressor) {
+    compressor.knee.value = 12;
+    compressor.attack.value = 0.012;
+    compressor.release.value = 0.18;
+  }
   limiter.ratio.value = 20;
   limiter.knee.value = 0;
   limiter.attack.value = 0.003;
   limiter.release.value = 0.12;
 
+  let roomSeconds: number | undefined;
   const update = (next: EffectSettings) => {
     const now = context.currentTime;
     highPass.frequency.setTargetAtTime(next.highPassHz, now, 0.01);
     warmth.gain.setTargetAtTime(next.warmthDb, now, 0.01);
     presence.gain.setTargetAtTime(next.presenceDb, now, 0.01);
     deEsser.gain.setTargetAtTime(-next.deEsserDb, now, 0.01);
-    compressor.threshold.setTargetAtTime(next.compressorThresholdDb, now, 0.01);
-    compressor.ratio.setTargetAtTime(next.compressorRatio, now, 0.01);
+    compressor?.threshold.setTargetAtTime(next.compressorThresholdDb, now, 0.01);
+    compressor?.ratio.setTargetAtTime(next.compressorRatio, now, 0.01);
     reverbWet.gain.setTargetAtTime(next.reverbMix, now, 0.01);
     delay.delayTime.setTargetAtTime(next.delayMs / 1_000, now, 0.01);
     delayFeedback.gain.setTargetAtTime(next.delayFeedback, now, 0.01);
     delayWet.gain.setTargetAtTime(next.delayMix, now, 0.01);
     limiter.threshold.setTargetAtTime(next.limiterThresholdDb, now, 0.01);
-    convolver.buffer = createImpulseBuffer(context, next.reverbSeconds);
+    if (roomSeconds !== next.reverbSeconds) {
+      convolver.buffer = createImpulseBuffer(context, next.reverbSeconds);
+      roomSeconds = next.reverbSeconds;
+    }
   };
 
   update(settings);
 
-  input.connect(highPass).connect(warmth).connect(presence).connect(deEsser).connect(compressor);
-  compressor.connect(dry).connect(mix);
-  compressor.connect(convolver).connect(reverbWet).connect(mix);
-  compressor.connect(delay).connect(delayWet).connect(mix);
+  input.connect(highPass).connect(warmth).connect(presence).connect(deEsser);
+  const voice = compressor ?? deEsser;
+  if (compressor) deEsser.connect(compressor);
+  voice.connect(dry).connect(mix);
+  voice.connect(convolver).connect(reverbWet).connect(mix);
+  voice.connect(delay).connect(delayWet).connect(mix);
   delay.connect(delayFeedback).connect(delay);
   mix.connect(limiter).connect(output);
 
-  const nodes: AudioNode[] = [input, highPass, warmth, presence, deEsser, compressor, dry,
+  const nodes: AudioNode[] = [input, highPass, warmth, presence, deEsser, ...(compressor ? [compressor] : []), dry,
     convolver, reverbWet, delay, delayFeedback, delayWet, mix, limiter, output];
 
   return {

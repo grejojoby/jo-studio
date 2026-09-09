@@ -36,6 +36,10 @@ export function useStudio() {
   const [isRecording, setRecording] = useState(false);
   const [isPlaying, setPlaying] = useState(false);
   const [isExporting, setExporting] = useState(false);
+  const [isBusy, setBusy] = useState(false);
+  const operationPending = useRef(false);
+  const sessionActive = useRef(true);
+  const [livePeaks, setLivePeaks] = useState<number[]>([]);
   const [positionSeconds, setPositionSeconds] = useState(0);
   const [levels, setLevels] = useState<LiveLevels>({ vocal: 0, backing: 0 });
   const [status, setStatus] = useState('Ready when you are.');
@@ -50,7 +54,7 @@ export function useStudio() {
   useEffect(() => {
     let cancelled = false;
     store.load()
-      .then((saved) => { if (!cancelled && saved) setProject(saved); })
+      .then((saved) => { if (!cancelled && saved) setProject({ ...saved, monitorEnabled: false }); })
       .catch((cause) => { if (!cancelled) setError(`Could not restore this session: ${errorMessage(cause)}`); })
       .finally(() => { if (!cancelled) setReady(true); });
     return () => { cancelled = true; };
@@ -64,42 +68,24 @@ export function useStudio() {
     return () => window.clearTimeout(timeout);
   }, [isReady, project, store]);
 
-  useEffect(() => () => {
-    if (ticker.current) window.clearInterval(ticker.current);
-    void engine.dispose();
-    store.close();
-  }, [engine, store]);
+  useEffect(() => {
+    sessionActive.current = true;
+    return () => {
+      sessionActive.current = false;
+      if (ticker.current) window.clearInterval(ticker.current);
+      void engine.dispose();
+      recorder.dispose();
+      store.close();
+    };
+  }, [engine, recorder, store]);
+
+  useEffect(() => { engine.setEffects(project.effects); }, [engine, project.effects]);
 
   const analyseAsset = useCallback(async (file: File): Promise<AudioAsset> => {
     assertUsableAudioFile(file);
     const analysis = await engine.analyse(file);
     return { name: file.name, blob: file, ...analysis };
   }, [engine]);
-
-  const importBacking = useCallback(async (file: File) => {
-    setError(undefined);
-    setStatus('Reading backing track…');
-    try {
-      const asset = await analyseAsset(file);
-      setProject((current) => setBacking(current, asset));
-      setStatus('Backing track ready.');
-    } catch (cause) { setError(errorMessage(cause)); setStatus('Backing track not added.'); }
-  }, [analyseAsset]);
-
-  const importVocal = useCallback(async (file: File) => {
-    setError(undefined);
-    setStatus('Reading vocal…');
-    try {
-      const asset = await analyseAsset(file);
-      setProject((current) => addTake(current, {
-        ...asset,
-        id: crypto.randomUUID(),
-        name: `Take ${String(current.takes.length + 1).padStart(2, '0')} · ${file.name}`,
-        createdAt: Date.now(),
-      }));
-      setStatus('Vocal take ready.');
-    } catch (cause) { setError(errorMessage(cause)); setStatus('Vocal not added.'); }
-  }, [analyseAsset]);
 
   const stopTicker = useCallback(() => {
     if (ticker.current) window.clearInterval(ticker.current);
@@ -119,8 +105,46 @@ export function useStudio() {
     setPlaying(false);
   }, [engine, stopTicker]);
 
+  const importBacking = useCallback(async (file: File) => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    setBusy(true);
+    stopPreview();
+    setError(undefined);
+    setStatus('Reading backing track…');
+    try {
+      const asset = await analyseAsset(file);
+      setProject((current) => setBacking(current, asset));
+      setStatus('Backing track ready.');
+    } catch (cause) { setError(errorMessage(cause)); setStatus('Backing track not added.'); }
+    finally { operationPending.current = false; setBusy(false); }
+  }, [analyseAsset, stopPreview]);
+
+  const importVocal = useCallback(async (file: File) => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    setBusy(true);
+    stopPreview();
+    setError(undefined);
+    setStatus('Reading vocal…');
+    try {
+      const asset = await analyseAsset(file);
+      setProject((current) => addTake(current, {
+        ...asset,
+        id: crypto.randomUUID(),
+        name: `Take ${String(current.takes.length + 1).padStart(2, '0')} · ${file.name}`,
+        createdAt: Date.now(),
+      }));
+      setStatus('Vocal take ready.');
+    } catch (cause) { setError(errorMessage(cause)); setStatus('Vocal not added.'); }
+    finally { operationPending.current = false; setBusy(false); }
+  }, [analyseAsset, stopPreview]);
+
   const togglePreview = useCallback(async () => {
+    if (operationPending.current) return;
     if (isPlaying) { stopPreview(); return; }
+    operationPending.current = true;
+    setBusy(true);
     setError(undefined);
     try {
       await engine.startPlayback({
@@ -137,9 +161,13 @@ export function useStudio() {
         if (!engine.isPlaying) { stopPreview(); setStatus('Preview finished.'); }
       });
     } catch (cause) { setError(errorMessage(cause)); }
+    finally { operationPending.current = false; setBusy(false); }
   }, [engine, isPlaying, project, selectedTake, startTicker, stopPreview]);
 
   const toggleRecording = useCallback(async () => {
+    if (operationPending.current) return;
+    operationPending.current = true;
+    setBusy(true);
     setError(undefined);
     if (isRecording) {
       setRecording(false);
@@ -161,14 +189,17 @@ export function useStudio() {
         }));
         setStatus('Take saved locally.');
       } catch (cause) { setError(errorMessage(cause)); setStatus('Take not saved.'); }
+      finally { operationPending.current = false; setBusy(false); }
       return;
     }
 
     stopPreview();
+    setLivePeaks([]);
     setStatus(project.backing ? 'Preparing the backing track…' : 'Waiting for microphone permission…');
     try {
       if (project.backing) await engine.decode(project.backing.blob);
       const stream = await recorder.start();
+      if (!sessionActive.current) { recorder.dispose(); return; }
       await engine.startInputMeter(stream);
       if (project.monitorEnabled) await engine.startMonitor(stream, project.effects, project.vocalVolume);
       if (project.backing) {
@@ -178,9 +209,12 @@ export function useStudio() {
         });
       }
       const startedAt = performance.now();
-      startTicker(() => setPositionSeconds((performance.now() - startedAt) / 1_000));
+      startTicker(() => {
+        setPositionSeconds((performance.now() - startedAt) / 1_000);
+        setLivePeaks((peaks) => [...peaks.slice(-159), engine.inputPeak]);
+      });
       setRecording(true);
-      setStatus(project.monitorEnabled ? 'Recording with effects in your headphones.' : 'Recording a dry take.');
+      setStatus(project.monitorEnabled ? 'Recording. Live tone and space in your headphones.' : 'Recording. Your microphone stays out of the speakers.');
     } catch (cause) {
       if (recorder.isRecording) await recorder.stop().catch(() => undefined);
       engine.stopInputMeter();
@@ -188,11 +222,12 @@ export function useStudio() {
       engine.stopPlayback();
       setError(errorMessage(cause));
       setStatus('Recording did not start.');
-    }
+    } finally { operationPending.current = false; setBusy(false); }
   }, [engine, isRecording, project, recorder, startTicker, stopPreview, stopTicker]);
 
   const exportAudio = useCallback(async (format: ExportFormat, target: ExportTarget) => {
-    if (!selectedTake) return;
+    if (!selectedTake || operationPending.current) return;
+    operationPending.current = true;
     setExporting(true);
     setError(undefined);
     setStatus('Rendering your audio locally…');
@@ -209,7 +244,7 @@ export function useStudio() {
       download(blob, `hushline-${target}.${format}`);
       setStatus('Export ready.');
     } catch (cause) { setError(errorMessage(cause)); setStatus('Export failed.'); }
-    finally { setExporting(false); }
+    finally { operationPending.current = false; setExporting(false); }
   }, [engine, project, selectedTake]);
 
   const clearSession = useCallback(async () => {
@@ -222,25 +257,22 @@ export function useStudio() {
   }, [stopPreview, store]);
 
   return {
-    project, selectedTake, isReady, isRecording, isPlaying, isExporting,
-    positionSeconds, levels, status, error, importBacking, importVocal, togglePreview,
+    project, selectedTake, isReady, isRecording, isPlaying, isExporting, isBusy,
+    positionSeconds, livePeaks, levels, status, error, importBacking, importVocal, togglePreview,
     toggleRecording, exportAudio, clearSession,
-    removeBacking: () => setProject((current) => setBacking(current)),
-    chooseTake: (id: string) => setProject((current) => selectTake(current, id)),
-    removeTake: (id: string) => setProject((current) => deleteTake(current, id)),
+    removeBacking: () => { stopPreview(); setProject((current) => setBacking(current)); },
+    chooseTake: (id: string) => { stopPreview(); setProject((current) => selectTake(current, id)); },
+    removeTake: (id: string) => { stopPreview(); setProject((current) => deleteTake(current, id)); },
     choosePreset: (id: PresetId) => setProject((current) => {
       const next = selectPreset(current, id);
-      engine.setEffects(next.effects);
       return next;
     }),
     updateMacro: (name: keyof MacroSettings, value: number) => setProject((current) => {
       const next = changeMacro(current, name, value);
-      engine.setEffects(next.effects);
       return next;
     }),
     updateEffect: (name: keyof EffectSettings, value: number) => setProject((current) => {
       const next = changeEffect(current, name, value);
-      engine.setEffects(next.effects);
       return next;
     }),
     updateLevel: (track: 'vocalVolume' | 'backingVolume', value: number) => {
